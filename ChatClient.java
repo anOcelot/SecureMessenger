@@ -1,12 +1,14 @@
 package Java;
 
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
-import java.util.Queue;
-import java.util.Stack;
+import java.util.*;
 
 /**
  * Created by pieterholleman on 11/14/17.
@@ -15,12 +17,17 @@ public class ChatClient {
 
     SocketChannel socket;
     Stack<String> messageStack;
+    Selector selector;
 
 
     public ChatClient(String ip, int port) throws IOException{
         messageStack = new Stack<String>();
         socket = SocketChannel.open();
         InetSocketAddress address = new InetSocketAddress(ip, port);
+        selector = Selector.open();
+        socket.configureBlocking(false);
+        socket.register(selector, SelectionKey.OP_READ);
+        socket.register(selector, SelectionKey.OP_WRITE);
         socket.socket().connect(address, 1000);
 
     }
@@ -31,7 +38,32 @@ public class ChatClient {
 
         while(true) {
 
+            try {
+                int num = selector.select();
+                Set keys = selector.selectedKeys();
+                Iterator it = keys.iterator();
+                while (it.hasNext()){
+                    SelectionKey key = (SelectionKey) it.next();
+
+                    if ((key.readyOps() & SelectionKey.OP_READ) == SelectionKey.OP_READ){
+
+                    }
+
+                    if ((key.readyOps() & SelectionKey.OP_WRITE) == SelectionKey.OP_WRITE){
+                        
+                    }
+
+                }
+
+
+
+                keys.clear();
+            } catch (IOException e){
+
+            }
+
             //wait for user input on one thread, receive in another?
+
             recieve();
             System.out.println(messageStack.peek());
 
