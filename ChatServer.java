@@ -22,17 +22,20 @@ public class ChatServer {
     //ConcurrentHashMap
     private ArrayList<SocketChannel> clients;
     private Map clientMap;
+    private Map screenNameMap;
     private ServerSocketChannel ServerChannel;
     Selector selector;
 
     public ChatServer(int port) throws IOException {
 
-        clientMap = Collections.synchronizedMap(new HashMap<SocketChannel, Integer>());
+        clientMap = Collections.synchronizedMap(new HashMap<SocketChannel, String>());
+        screenNameMap = Collections.synchronizedMap(new HashMap<String, SocketChannel>());
         selector = Selector.open();
         ServerChannel = ServerSocketChannel.open();
         ServerChannel.configureBlocking(false);
         ServerChannel.bind(new InetSocketAddress(port));
         clients = new ArrayList<SocketChannel>();
+        ServerChannel.register(selector, SelectionKey.OP_ACCEPT);
 
     }
 
@@ -44,8 +47,9 @@ public class ChatServer {
         while(true){
 
             try {
-                //SocketChannel clientSocket = ServerChannel.accept();
-                ServerChannel.register(selector, SelectionKey.OP_ACCEPT);
+
+
+
                 int num = selector.select();
                 if (num == 0) continue;
                 Set keys = selector.selectedKeys();
@@ -55,10 +59,22 @@ public class ChatServer {
 
                     if ((key.readyOps() & SelectionKey.OP_ACCEPT) == (SelectionKey.OP_ACCEPT)){
                         SocketChannel clientSocket = ServerChannel.accept();
+                        clientSocket.configureBlocking(false);
                         clientSocket.register(selector, SelectionKey.OP_WRITE);
                         clientSocket.register(selector, SelectionKey.OP_READ);
                         clients.add(clientSocket);
+                        clientMap.put(clientSocket, "test");
+                        screenNameMap.put("test", clientSocket);
                         System.out.println("Client connected");
+                    }
+
+                    if ((key.readyOps() & SelectionKey.OP_READ) == (SelectionKey.OP_READ)){
+                        SocketChannel sc = (SocketChannel)key.channel();
+                        recieve(sc);
+                    }
+
+                    if ((key.readyOps() & SelectionKey.OP_WRITE) == (SelectionKey.OP_WRITE)){
+
                     }
                 }
                 //clients.add(clientSocket);
@@ -69,6 +85,24 @@ public class ChatServer {
                 e.printStackTrace();
             }
         }
+    }
+
+    public void recieve(SocketChannel s){
+
+        ByteBuffer inBuffer = ByteBuffer.allocate(1024);
+
+        try {
+            s.read(inBuffer);
+            String message = new String(inBuffer.array()).trim();
+//            if (clientMap.get(s) == null){
+//                clientMap.put(s, message);
+//                screenNameMap.put(message, s);
+//            }
+            System.out.println(message);
+        } catch (IOException e){
+            System.out.println("Recieve error");
+        }
+
     }
 
 

@@ -18,39 +18,44 @@ public class ChatClient {
     SocketChannel socket;
     Stack<String> messageStack;
     Selector selector;
+    String screenName;
 
 
-    public ChatClient(String ip, int port) throws IOException{
+    public ChatClient(String ip, int port, String str) throws IOException{
         messageStack = new Stack<String>();
         socket = SocketChannel.open();
         InetSocketAddress address = new InetSocketAddress(ip, port);
         selector = Selector.open();
+        socket.socket().connect(address, 1000);
         socket.configureBlocking(false);
         socket.register(selector, SelectionKey.OP_READ);
         socket.register(selector, SelectionKey.OP_WRITE);
-        socket.socket().connect(address, 1000);
+        screenName = str;
+        //socket.socket().connect(address, 1000);
 
     }
 
-    public void run() {
+    public void runChat() {
 
-        System.out.println("Receiving...");
+        System.out.println("Chat session initiated, screenname: " + screenName);
 
         while(true) {
 
             try {
                 int num = selector.select();
+
+                if (num == 0) continue;
                 Set keys = selector.selectedKeys();
                 Iterator it = keys.iterator();
                 while (it.hasNext()){
                     SelectionKey key = (SelectionKey) it.next();
 
                     if ((key.readyOps() & SelectionKey.OP_READ) == SelectionKey.OP_READ){
-
+                        recieve();
                     }
 
                     if ((key.readyOps() & SelectionKey.OP_WRITE) == SelectionKey.OP_WRITE){
-                        
+
                     }
 
                 }
@@ -64,11 +69,37 @@ public class ChatClient {
 
             //wait for user input on one thread, receive in another?
 
-            recieve();
-            System.out.println(messageStack.peek());
+            //recieve();
+
 
 
         }
+    }
+
+    public void go(){
+
+        ChatClientT t = new ChatClientT();
+        t.start();
+        //send(screenName);
+        Scanner scan = new Scanner(System.in);
+        while(true){
+            System.out.println("Enter a message");
+            String message = scan.next();
+            send(message);
+
+
+        }
+    }
+
+    private class ChatClientT extends Thread {
+
+         ChatClientT() { }
+
+         public void run(){
+             runChat();
+         }
+
+
     }
 
 
@@ -91,6 +122,7 @@ public class ChatClient {
         try {
             socket.read(inBuffer);
             String message = new String(inBuffer.array()).trim();
+            System.out.println(message);
             messageStack.push(message);
         } catch (IOException e){
             System.out.println("Recieve error");
