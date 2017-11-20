@@ -1,4 +1,4 @@
-package Java;
+package secP;
 
 import java.io.IOException;
 
@@ -10,8 +10,7 @@ public class TestClient {
     public static void main(String[] args) {
 
         try{
-            ChatClient one = new ChatClient("127.0.0.1", 1984, "PickleRick");
-            one.go();
+            ChatClient one = new ChatClient("127.0.0.1", 1984, "PR");
             System.out.println("Connected!");
 
         } catch (IOException e){

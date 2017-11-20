@@ -1,6 +1,6 @@
-package Java;
+package secP;
 
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
+
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -13,29 +13,34 @@ import java.util.*;
 /**
  * Created by pieterholleman on 11/14/17.
  */
-public class ChatClient {
+public class ChatClient implements Runnable {
 
     SocketChannel socket;
     Stack<String> messageStack;
     Selector selector;
     String screenName;
+    Scanner scan = new Scanner(System.in);
 
 
     public ChatClient(String ip, int port, String str) throws IOException{
         messageStack = new Stack<String>();
         socket = SocketChannel.open();
         InetSocketAddress address = new InetSocketAddress(ip, port);
-        selector = Selector.open();
         socket.socket().connect(address, 1000);
         socket.configureBlocking(false);
+        selector = Selector.open();
         socket.register(selector, SelectionKey.OP_READ);
         socket.register(selector, SelectionKey.OP_WRITE);
-        screenName = str;
-        //socket.socket().connect(address, 1000);
+        screenName = '%' + str;
+        ByteBuffer nameBuf = ByteBuffer.wrap(screenName.getBytes());
+        socket.write(nameBuf);
+        this.run();
 
     }
+    
 
-    public void runChat() {
+	@Override
+    public void run() {
 
         System.out.println("Chat session initiated, screenname: " + screenName);
 
@@ -49,13 +54,18 @@ public class ChatClient {
                 Iterator it = keys.iterator();
                 while (it.hasNext()){
                     SelectionKey key = (SelectionKey) it.next();
-
-                    if ((key.readyOps() & SelectionKey.OP_READ) == SelectionKey.OP_READ){
-                        recieve();
+                    it.remove();
+                    
+                    if(key.isConnectable()){
+                    	connect(key);
                     }
-
-                    if ((key.readyOps() & SelectionKey.OP_WRITE) == SelectionKey.OP_WRITE){
-
+                    
+                    if(key.isReadable()){
+                    	recieve(key);
+                    }
+                    
+                    if(key.isWritable()){
+                    	write(key);
                     }
 
                 }
@@ -76,57 +86,48 @@ public class ChatClient {
         }
     }
 
-    public void go(){
+    private void write(SelectionKey key) {
+    	System.out.println("Enter a message");
+        String msg = scan.nextLine();
+    	  ByteBuffer out = ByteBuffer.wrap(msg.getBytes());
+          try {
+              socket.write(out);
+              messageStack.push(msg);
+          } catch (IOException e){
+              System.out.println("Send error");
+          }
+          
+          key.interestOps(SelectionKey.OP_READ);
+	}
 
-        ChatClientT t = new ChatClientT();
-        t.start();
-        //send(screenName);
-        Scanner scan = new Scanner(System.in);
-        while(true){
-            System.out.println("Enter a message");
-            String message = scan.next();
-            send(message);
+	private void connect(SelectionKey key) {
+		try {
+			if(socket.finishConnect()){
+				key.interestOps(SelectionKey.OP_READ);
+			}
+			
+		} catch (IOException e) {
+			key.cancel();
+			e.printStackTrace();
+		}
+		
+	}
 
-
-        }
-    }
-
-    private class ChatClientT extends Thread {
-
-         ChatClientT() { }
-
-         public void run(){
-             runChat();
-         }
-
-
-    }
-
-
-
-    public void send(String msg){
-
-        ByteBuffer out = ByteBuffer.wrap(msg.getBytes());
-        try {
-            socket.write(out);
-            messageStack.push(msg);
-        } catch (IOException e){
-            System.out.println("Send error");
-        }
-    }
-
-    public void recieve(){
+    public void recieve(SelectionKey key){
 
         ByteBuffer inBuffer = ByteBuffer.allocate(1024);
+        System.out.println("Line 123 Recieve");
 
         try {
             socket.read(inBuffer);
             String message = new String(inBuffer.array()).trim();
             System.out.println(message);
-            messageStack.push(message);
+            //messageStack.push(message);
         } catch (IOException e){
-            System.out.println("Recieve error");
+            System.out.println("Recieve error @ void recieve");
         }
+        
+        key.interestOps(SelectionKey.OP_WRITE);
 
     }
 
@@ -139,6 +140,8 @@ public class ChatClient {
         }
 
     }
+
+
 
 
 }
