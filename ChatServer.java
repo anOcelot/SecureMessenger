@@ -137,6 +137,13 @@ public class ChatServer {
             if (message.startsWith("%")){
                 s.close();
             }
+
+//            if (message.startsWith("%")) {
+//                String user = message.substring(1);
+//                System.out.println("New User: " + user);
+//                this.addUser(user, s);
+//
+//            }
             broadcast(message);
 
         } catch (IOException e){
