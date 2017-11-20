@@ -37,6 +37,7 @@ public class ChatServer {
         clients = new ArrayList<SocketChannel>();
         ServerChannel.register(selector, SelectionKey.OP_ACCEPT);
 
+
     }
 
     public void listenForConnections() {
@@ -60,7 +61,7 @@ public class ChatServer {
                     if ((key.readyOps() & SelectionKey.OP_ACCEPT) == (SelectionKey.OP_ACCEPT)){
                         SocketChannel clientSocket = ServerChannel.accept();
                         clientSocket.configureBlocking(false);
-                        clientSocket.register(selector, SelectionKey.OP_WRITE);
+                        //clientSocket.register(selector, SelectionKey.OP_WRITE);
                         clientSocket.register(selector, SelectionKey.OP_READ);
                         clients.add(clientSocket);
                         clientMap.put(clientSocket, "test");
@@ -71,10 +72,28 @@ public class ChatServer {
                     if ((key.readyOps() & SelectionKey.OP_READ) == (SelectionKey.OP_READ)){
                         SocketChannel sc = (SocketChannel)key.channel();
                         recieve(sc);
+
+                        String response = "hi - from non-blocking server";
+                        byte[] bs = response.getBytes();
+                        ByteBuffer buffer = ByteBuffer.wrap(bs);
+
+//                        for (SocketChannel sock : clients){
+//
+//                            sock.write(buffer);
+//                            System.out.println("sent");
+//
+//                        }
+
+
                     }
 
-                    if ((key.readyOps() & SelectionKey.OP_WRITE) == (SelectionKey.OP_WRITE)){
-
+                    if (key.isWritable()){
+//                        SocketChannel sc = (SocketChannel) key.channel();
+//                        String response = "hi - from non-blocking server";
+//                        byte[] bs = response.getBytes();
+//                        ByteBuffer buffer = ByteBuffer.wrap(bs);
+//                        sc.write(buffer);
+//                        System.out.println("sent");
                     }
                 }
                 //clients.add(clientSocket);
@@ -85,6 +104,22 @@ public class ChatServer {
                 e.printStackTrace();
             }
         }
+    }
+
+    private void broadcast(String message) {
+        ByteBuffer broBuf = ByteBuffer.wrap(message.getBytes());
+        for(SelectionKey key : selector.keys()){
+            if(key.isValid() && key.channel() instanceof SocketChannel){
+                SocketChannel sch=(SocketChannel) key.channel();
+                try {
+                    sch.write(broBuf);
+                } catch (IOException e) {
+                    System.out.println("BroBuf error");
+                }
+                broBuf.rewind();
+            }
+        }
+
     }
 
     public void recieve(SocketChannel s){
@@ -99,6 +134,11 @@ public class ChatServer {
 //                screenNameMap.put(message, s);
 //            }
             System.out.println(message);
+            if (message.startsWith("%")){
+                s.close();
+            }
+            broadcast(message);
+
         } catch (IOException e){
             System.out.println("Recieve error");
         }
@@ -120,6 +160,8 @@ public class ChatServer {
                 String message = new String(buffer.array()).trim();
                 System.out.print("Recieved message: ");
                 System.out.println(message);
+                if (message.startsWith("%")){
+                }
 
             } catch (IOException E){
                 System.out.println("SocketChannel read error");

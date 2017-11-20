@@ -2,6 +2,7 @@ package Java;
 
 import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -28,8 +29,10 @@ public class ChatClient {
         selector = Selector.open();
         socket.socket().connect(address, 1000);
         socket.configureBlocking(false);
-        socket.register(selector, SelectionKey.OP_READ);
+        //socket.register(selector, SelectionKey.OP_READ);
+
         socket.register(selector, SelectionKey.OP_WRITE);
+        socket.register(selector, SelectionKey.OP_READ);
         screenName = str;
         //socket.socket().connect(address, 1000);
 
@@ -82,8 +85,9 @@ public class ChatClient {
         t.start();
         //send(screenName);
         Scanner scan = new Scanner(System.in);
+        System.out.println("Enter a message");
         while(true){
-            System.out.println("Enter a message");
+            //System.out.println("Enter a message");
             String message = scan.next();
             send(message);
 
