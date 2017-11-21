@@ -1,5 +1,8 @@
-package secP;
+package Java;
 
+
+
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -11,134 +14,135 @@ import java.util.*;
 /**
  * Created by pieterholleman on 11/14/17.
  */
-public class ChatClient implements Runnable {
+public class ChatClient {
 
-	SocketChannel socket;
-	Stack<String> messageStack;
-	Selector selector;
-	String screenName;
-	Scanner scan = new Scanner(System.in);
+    SocketChannel socket;
+    Stack<String> messageStack;
+    Selector selector;
+    String screenName;
 
-	public ChatClient(String ip, int port, String str) throws IOException {
-		messageStack = new Stack<String>();
-		socket = SocketChannel.open();
-		InetSocketAddress address = new InetSocketAddress(ip, port);
-		socket.socket().connect(address, 1000);
-		socket.configureBlocking(false);
-		selector = Selector.open();
-		socket.register(selector, SelectionKey.OP_READ);
-		socket.register(selector, SelectionKey.OP_WRITE);
-		screenName = '%' + str;
-		ByteBuffer nameBuf = ByteBuffer.wrap(screenName.getBytes());
-		socket.write(nameBuf);
-		this.run();
 
-	}
+    public ChatClient(String ip, int port, String str) throws IOException{
+        messageStack = new Stack<String>();
+        socket = SocketChannel.open();
+        InetSocketAddress address = new InetSocketAddress(ip, port);
+        selector = Selector.open();
+        socket.socket().connect(address, 1000);
+        socket.configureBlocking(false);
+        //socket.register(selector, SelectionKey.OP_READ);
 
-	@Override
-	public void run() {
+        socket.register(selector, SelectionKey.OP_WRITE);
+        socket.register(selector, SelectionKey.OP_READ);
+        screenName = str;
+        //socket.socket().connect(address, 1000);
 
-		System.out.println("Chat session initiated, screenname: " + screenName);
+    }
 
-		while (true) {
+    public void runChat() {
 
-			try {
-				int num = selector.select();
+        System.out.println("Chat session initiated, screenname: " + screenName);
 
-				if (num == 0)
-					continue;
-				Set keys = selector.selectedKeys();
-				Iterator it = keys.iterator();
-				while (it.hasNext()) {
-					SelectionKey key = (SelectionKey) it.next();
-					it.remove();
+        while(true) {
 
-					if (key.isConnectable()) {
-						connect(key);
-					}
+            try {
+                int num = selector.select();
 
-					//if (key.isReadable()) {
-						//recieve(key);
-					//}
+                if (num == 0) continue;
+                Set keys = selector.selectedKeys();
+                Iterator it = keys.iterator();
+                while (it.hasNext()){
+                    SelectionKey key = (SelectionKey) it.next();
 
-					if (key.isWritable()) {
-						write(key);
-					}
+                    if ((key.readyOps() & SelectionKey.OP_READ) == SelectionKey.OP_READ){
+                        recieve();
+                    }
 
-				}
+                    if ((key.readyOps() & SelectionKey.OP_WRITE) == SelectionKey.OP_WRITE){
 
-				keys.clear();
-			} catch (IOException e) {
+                    }
 
-			}
+                }
 
-			// wait for user input on one thread, receive in another?
 
-			// recieve();
 
-		}
-	}
+                keys.clear();
+            } catch (IOException e){
 
-	private void write(SelectionKey key) {
-		System.out.println("Enter a message");
-		String msg = scan.nextLine();
-		ByteBuffer out = ByteBuffer.wrap(msg.getBytes());
-		try {
-			socket.write(out);
-			messageStack.push(msg);
-		} catch (IOException e) {
-			System.out.println("Send error");
-		}
+            }
 
-		key.interestOps(SelectionKey.OP_READ);
-	}
+            //wait for user input on one thread, receive in another?
 
-	private void connect(SelectionKey key) {
-		try {
-			if (socket.finishConnect()) {
-				key.interestOps(SelectionKey.OP_READ);
-			}
+            //recieve();
 
-		} catch (IOException e) {
-			key.cancel();
-			e.printStackTrace();
-		}
 
-	}
 
-	public void recieve(SelectionKey key) {
+        }
+    }
 
-		ByteBuffer inBuffer = ByteBuffer.allocate(1024);
-		System.out.println("Line 123 Recieve");
+    public void go(){
 
-		try {
-			socket.read(inBuffer);
-			String message = new String(inBuffer.array()).trim();
-			System.out.println(message);
-			// messageStack.push(message);
-		} catch (IOException e) {
-			System.out.println("Recieve error @ void recieve");
-		}
+        ChatClientT t = new ChatClientT();
+        t.start();
+        send( '#' + screenName);
+        Scanner scan = new Scanner(System.in);
+        System.out.println("Enter a message");
+        while(true){
+            //System.out.println("Enter a message");
+            String message = scan.nextLine();
+            send(message);
 
-		key.interestOps(SelectionKey.OP_WRITE);
 
-	}
+        }
+    }
 
-	public void disconnect() {
+    private class ChatClientT extends Thread {
 
-		try {
-			socket.close();
-		} catch (IOException e) {
-			System.out.println("Error in disconnect");
-		}
+         ChatClientT() { }
 
-	}
+         public void run(){
+             runChat();
+         }
 
-	class ClientListen extends Thread {
 
-		public void run() {
-			
-		}
+    }
 
-	}
+
+
+    public void send(String msg){
+
+        ByteBuffer out = ByteBuffer.wrap(msg.getBytes());
+        try {
+            socket.write(out);
+            messageStack.push(msg);
+        } catch (IOException e){
+            System.out.println("Send error");
+        }
+    }
+
+    public void recieve(){
+
+        ByteBuffer inBuffer = ByteBuffer.allocate(1024);
+
+        try {
+            socket.read(inBuffer);
+            String message = new String(inBuffer.array()).trim();
+            System.out.println(message);
+            messageStack.push(message);
+        } catch (IOException e){
+            System.out.println("Recieve error");
+        }
+
+    }
+
+    public void disconnect(){
+
+        try {
+            socket.close();
+        } catch (IOException e) {
+            System.out.println("Error in disconnect");
+        }
+
+    }
+
+
 }
