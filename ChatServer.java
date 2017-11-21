@@ -118,7 +118,7 @@ public class ChatServer {
 
 	}
 
-	private void sendToUser(String user, String messageTo) {
+	private void sendToUser(String user, String messageTo, String sendUser) {
 		SocketChannel sendTo = null;
 		boolean got = false;
 		Iterator<Map.Entry<String, SocketChannel>> it = screenNameMap.entrySet().iterator();
@@ -127,7 +127,7 @@ public class ChatServer {
 			Map.Entry<String, SocketChannel> pair = it.next();
 			if (user.equals(pair.getKey())) {
 				System.out.println("Line 164 Got User");
-				messageTo = "From " + user + "::" + messageTo;
+				messageTo = "From " + sendUser + "::" + messageTo;
 				sendTo = pair.getValue();
 				got = true;
 			}
@@ -168,7 +168,16 @@ public class ChatServer {
 			if (message.startsWith("@")) {
 				String user = message.substring(1, message.indexOf(' '));
 				String messageTo = message.substring(message.indexOf(' '));
-				sendToUser(user, messageTo);
+				Iterator<Map.Entry<String, SocketChannel>> it = screenNameMap.entrySet().iterator();
+				String sendUser = "";
+				while (it.hasNext()) {
+					System.out.println("Line 161 sendToUser");
+					Map.Entry<String, SocketChannel> pair = it.next();
+					if (s == pair.getValue()) {
+						sendUser = pair.getKey();
+					}
+				}
+				sendToUser(user, messageTo, sendUser);
 			}
 
 			if (message.startsWith("#")) {
@@ -178,6 +187,27 @@ public class ChatServer {
 				screenNameMap.put(user, s);
 				System.out.println(Arrays.toString(clientMap.entrySet().toArray()));
 				System.out.println(Arrays.toString(screenNameMap.entrySet().toArray()));
+			}
+			
+			if(message.equalsIgnoreCase("!List")){
+				String list = "Users: ";
+				Iterator<Map.Entry<String, SocketChannel>> it = screenNameMap.entrySet().iterator();
+				while (it.hasNext()) {
+					System.out.println("Line 161 sendToUser");
+					Map.Entry<String, SocketChannel> pair = it.next();
+					if(pair.getValue()!=s){
+						list = list + pair.getKey() + "|";
+					}
+				}
+				
+				ByteBuffer out = ByteBuffer.wrap(list.getBytes());
+				try {
+					s.write(out);
+				} catch (IOException e) {
+					System.out.println("Send error");
+				}
+				
+				
 			}
 
 		} catch (IOException e) {

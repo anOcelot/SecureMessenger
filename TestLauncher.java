@@ -1,4 +1,4 @@
-package secP;
+package Java;
 
 import java.io.IOException;
 
