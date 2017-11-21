@@ -42,7 +42,7 @@ public class ChatClient {
 
         System.out.println("Chat session initiated, screenname: " + screenName);
 
-        while(true) {
+        while(socket.isConnected()) {
 
             try {
                 int num = selector.select();
@@ -77,22 +77,38 @@ public class ChatClient {
 
 
         }
+
+
     }
 
     public void go(){
 
         ChatClientT t = new ChatClientT();
         t.start();
+
+        try{
         send( '#' + screenName);
         Scanner scan = new Scanner(System.in);
         System.out.println("Enter a message");
-        while(true){
-            //System.out.println("Enter a message");
-            String message = scan.nextLine();
-            send(message);
+
+            while (socket.isConnected()) {
+                //System.out.println("Enter a message");
+                String message = scan.nextLine();
+                send(message);
 
 
+
+            }
+        } catch (IOException e){
+            e.printStackTrace();
         }
+        System.out.println("Connection closed");
+
+        t.stop();
+
+        System.exit(0);
+
+
     }
 
     private class ChatClientT extends Thread {
@@ -108,15 +124,15 @@ public class ChatClient {
 
 
 
-    public void send(String msg){
+    public void send(String msg)throws IOException {
 
         ByteBuffer out = ByteBuffer.wrap(msg.getBytes());
-        try {
+
             socket.write(out);
             messageStack.push(msg);
-        } catch (IOException e){
-            System.out.println("Send error");
-        }
+
+            //System.out.println("Send error");
+
     }
 
     public void recieve(){
@@ -126,8 +142,13 @@ public class ChatClient {
         try {
             socket.read(inBuffer);
             String message = new String(inBuffer.array()).trim();
-            System.out.println(message);
+            //System.out.println(message);
             messageStack.push(message);
+            if (message.equals("-1")){
+                System.out.println("Server disconnected");
+                System.exit(0);
+            }
+            System.out.println(message);
         } catch (IOException e){
             System.out.println("Recieve error");
         }

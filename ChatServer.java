@@ -1,6 +1,7 @@
 package Java;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -69,9 +70,9 @@ public class ChatServer {
 						SocketChannel sc = (SocketChannel) key.channel();
 						recieve(sc);
 
-						String response = "hi - from non-blocking server";
-						byte[] bs = response.getBytes();
-						ByteBuffer buffer = ByteBuffer.wrap(bs);
+						//String response = "hi - from non-blocking server";
+						//byte[] bs = response.getBytes();
+						//ByteBuffer buffer = ByteBuffer.wrap(bs);
 
 						// for (SocketChannel sock : clients){
 						//
@@ -82,14 +83,14 @@ public class ChatServer {
 
 					}
 
-					if (key.isWritable()) {
+					//if (key.isWritable()) {
 						// SocketChannel sc = (SocketChannel) key.channel();
 						// String response = "hi - from non-blocking server";
 						// byte[] bs = response.getBytes();
 						// ByteBuffer buffer = ByteBuffer.wrap(bs);
 						// sc.write(buffer);
 						// System.out.println("sent");
-					}
+					//}
 				}
 				// clients.add(clientSocket);
 				++i;
@@ -158,11 +159,31 @@ public class ChatServer {
 			System.out.println(message);
 
 			if (message.startsWith("%")) {
-				s.close();
+
+				//s.close();
+				String user = message.substring(1);
+				Iterator<Map.Entry<String, SocketChannel>> it = screenNameMap.entrySet().iterator();
+
+				while (it.hasNext()) {
+					System.out.println("Line 161 sendToUser");
+					Map.Entry<String, SocketChannel> pair = it.next();
+					System.out.println(pair.getKey());
+					if (user.equals(pair.getKey())) {
+						SocketChannel toKick = pair.getValue();
+						String str = "-1";
+						toKick.write(ByteBuffer.wrap(str.getBytes()));
+						toKick.close();
+
+					}
+				}
+
 			}
 
 			if (message.startsWith("$")) {
 				broadcast(message.substring(1));
+				String user = message.substring(1, message.indexOf(' '));
+				Iterator<Map.Entry<String, SocketChannel>> it = screenNameMap.entrySet().iterator();
+
 			}
 
 			if (message.startsWith("@")) {
@@ -214,6 +235,17 @@ public class ChatServer {
 			System.out.println("Recieve error");
 		}
 
+	}
+
+	public void close(Socket s){
+
+		try {
+			InputStream is = s.getInputStream();
+			while (is.read() > 0);
+			s.close();
+		} catch (IOException e){
+
+		}
 	}
 
 	private void startChatSession(SocketChannel clientSocket) {

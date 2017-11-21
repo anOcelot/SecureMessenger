@@ -16,7 +16,7 @@ public class TestClient {
 			String user = scan.nextLine();
 			ChatClient one = new ChatClient("127.0.0.1", 1984, user);
 			one.go();
-			System.out.println("Connected!");
+			//System.out.println("Connected!");
 
 		} catch (IOException e) {
 			System.out.println("Connect");
