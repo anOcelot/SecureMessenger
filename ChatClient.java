@@ -9,6 +9,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.security.SecureRandom;
 import java.util.*;
 
 import javax.crypto.SecretKey;
@@ -26,6 +27,8 @@ public class ChatClient {
     cryptotest encoder;
     SecretKey sKey;
     byte sKeyB[];
+    byte ivBytes[];
+    SecureRandom r;
     
 
 
@@ -36,12 +39,14 @@ public class ChatClient {
         selector = Selector.open();
         encoder = new cryptotest();
         encoder.setPublicKey("RSApub.der");
-        SecretKey sKey = encoder.generateAESKey();
-        sKeyB = encoder.RSAEncrypt(sKey.toString().getBytes());
+        sKey = encoder.generateAESKey();
+        sKeyB = encoder.RSAEncrypt(sKey.getEncoded());
         socket.socket().connect(address, 1000);
         socket.configureBlocking(false);
         //socket.register(selector, SelectionKey.OP_READ);
-
+        ivBytes = new byte[16];
+        r = new SecureRandom();
+        r.nextBytes(ivBytes);
         socket.register(selector, SelectionKey.OP_WRITE);
         socket.register(selector, SelectionKey.OP_READ);
         screenName = str;
@@ -95,7 +100,9 @@ public class ChatClient {
         ChatClientT t = new ChatClientT();
         t.start();
         send(sKeyB.toString());
-        byte ivBytes[] = new byte[] {0,1,2,3,4};
+        //byte ivBytes[] = new byte[16];
+        //SecureRandom r = new SecureRandom();
+        //r.nextBytes(ivBytes);
         IvParameterSpec iv = new IvParameterSpec(ivBytes);
         send(encoder.encrypt(('#' + screenName).getBytes(), sKey,iv).toString());
         Scanner scan = new Scanner(System.in);
@@ -139,7 +146,9 @@ public class ChatClient {
 
         try {
             socket.read(inBuffer);
-            byte ivBytes[] = new byte[] {0,1,2,3,4};
+            //byte ivBytes[] = new byte[16];
+            //SecureRandom r = new SecureRandom();
+            //r.nextBytes(ivBytes);
             IvParameterSpec iv = new IvParameterSpec(ivBytes);
             String message = encoder.decrypt(inBuffer.array(), sKey, iv).toString();
             System.out.println(message);

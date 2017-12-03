@@ -73,6 +73,7 @@ class CustomEncryptor {
 			return plaintext;
 		} catch (Exception e) {
 			System.out.println("AES Decrypt Exception");
+			e.printStackTrace();
 			System.exit(1);
 			return null;
 		}

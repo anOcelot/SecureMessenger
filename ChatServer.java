@@ -35,7 +35,7 @@ public class ChatServer {
 
 		encoder = new cryptotest();
 		encoder.setPrivateKey("RSApriv.der");
-		// encoder.setPublicKey("RSApub.der");
+        encoder.setPublicKey("RSApub.der");
 		clientMap = Collections.synchronizedMap(new HashMap<SocketChannel, String>());
 		screenNameMap = Collections.synchronizedMap(new HashMap<String, SocketChannel>());
 		clientKeyMap = Collections.synchronizedMap(new HashMap<SocketChannel, byte[]>());
@@ -188,6 +188,8 @@ public class ChatServer {
 			else {
 				Iterator<Map.Entry<SocketChannel, byte[]>> itA = clientKeyMap.entrySet().iterator();
 				SecretKey symKey = null;
+				//maybe?
+				//symKey = new SecretKeySpec((byte[])clientKeyMap.get(s), "AES");
 				while (itA.hasNext()) {
 					Map.Entry<SocketChannel, byte[]> pair = itA.next();
 					if (s == pair.getKey()) {

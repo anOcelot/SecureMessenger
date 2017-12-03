@@ -25,6 +25,9 @@ class cryptotest{
 	System.out.printf("CipherText: %s%n",DatatypeConverter.printHexBinary(ciphertext));
 	byte decryptedsecret[] = c.RSADecrypt(encryptedsecret);
 	SecretKey ds = new SecretKeySpec(decryptedsecret,"AES");
+
+	r.nextBytes(ivbytes);
+
 	byte decryptedplaintext[] = c.decrypt(ciphertext,ds,iv);
 	String dpt = new String(decryptedplaintext);
 	System.out.printf("PlainText: %s%n",dpt);
@@ -44,6 +47,7 @@ class cryptotest{
 	    return ciphertext;
 	}catch(Exception e){
 	    System.out.println("AES Encrypt Exception");
+	    e.printStackTrace();
 	    System.exit(1);
 	    return null;
 	}
@@ -57,6 +61,7 @@ class cryptotest{
 	    return plaintext;
 	}catch(Exception e){
 	    System.out.println("AES Decrypt Exception");
+	    e.printStackTrace();
 	    System.exit(1);
 	    return null;
 	}
@@ -70,6 +75,7 @@ class cryptotest{
 	    return plaintext;
 	}catch(Exception e){
 	    System.out.println("RSA Decrypt Exception");
+	    e.printStackTrace();
 	    System.exit(1);
 	    return null;
 	}
