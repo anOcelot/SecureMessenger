@@ -14,9 +14,11 @@ public class TestClient {
 			Scanner scan = new Scanner(System.in);
 			System.out.print("Enter name: ");
 			String user = scan.nextLine();
-			ChatClient one = new ChatClient("127.0.0.1", 1984, user);
+			System.out.print("Enter IP: ");
+			String ip = scan.nextLine();
+			ChatClient one = new ChatClient(ip, 1984, user);
 			one.go();
-			//System.out.println("Connected!");
+			System.out.println("Connected!");
 
 		} catch (IOException e) {
 			System.out.println("Connect");

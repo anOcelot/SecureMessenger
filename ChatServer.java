@@ -1,7 +1,6 @@
 package Java;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -10,6 +9,10 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.*;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  * Created by pieterholleman on 11/14/17.
@@ -22,13 +25,21 @@ public class ChatServer {
 	private ArrayList<SocketChannel> clients;
 	private Map clientMap;
 	private Map screenNameMap;
+	private Map clientKeyMap;
+	private Map nameKeyMap;
 	private ServerSocketChannel ServerChannel;
 	Selector selector;
+	cryptotest encoder;
 
 	public ChatServer(int port) throws IOException {
 
+		encoder = new cryptotest();
+		encoder.setPrivateKey("RSApriv.der");
+		// encoder.setPublicKey("RSApub.der");
 		clientMap = Collections.synchronizedMap(new HashMap<SocketChannel, String>());
 		screenNameMap = Collections.synchronizedMap(new HashMap<String, SocketChannel>());
+		clientKeyMap = Collections.synchronizedMap(new HashMap<SocketChannel, byte[]>());
+		nameKeyMap = Collections.synchronizedMap(new HashMap<String, String>());
 		selector = Selector.open();
 		ServerChannel = ServerSocketChannel.open();
 		ServerChannel.configureBlocking(false);
@@ -61,8 +72,8 @@ public class ChatServer {
 						// SelectionKey.OP_WRITE);
 						clientSocket.register(selector, SelectionKey.OP_READ);
 						clients.add(clientSocket);
-						clientMap.put(clientSocket, "test");
-						screenNameMap.put("test", clientSocket);
+						// clientMap.put(clientSocket, "test");
+						// screenNameMap.put("test", clientSocket);
 						System.out.println("Client connected");
 					}
 
@@ -70,9 +81,9 @@ public class ChatServer {
 						SocketChannel sc = (SocketChannel) key.channel();
 						recieve(sc);
 
-						//String response = "hi - from non-blocking server";
-						//byte[] bs = response.getBytes();
-						//ByteBuffer buffer = ByteBuffer.wrap(bs);
+						String response = "hi - from non-blocking server";
+						byte[] bs = response.getBytes();
+						ByteBuffer buffer = ByteBuffer.wrap(bs);
 
 						// for (SocketChannel sock : clients){
 						//
@@ -83,14 +94,14 @@ public class ChatServer {
 
 					}
 
-					//if (key.isWritable()) {
+					if (key.isWritable()) {
 						// SocketChannel sc = (SocketChannel) key.channel();
 						// String response = "hi - from non-blocking server";
 						// byte[] bs = response.getBytes();
 						// ByteBuffer buffer = ByteBuffer.wrap(bs);
 						// sc.write(buffer);
 						// System.out.println("sent");
-					//}
+					}
 				}
 				// clients.add(clientSocket);
 				++i;
@@ -135,7 +146,18 @@ public class ChatServer {
 		}
 
 		if (got == true) {
-			ByteBuffer out = ByteBuffer.wrap(messageTo.getBytes());
+			Iterator<Map.Entry<SocketChannel, byte[]>> itA = clientKeyMap.entrySet().iterator();
+			SecretKey symKey = null;
+			while (itA.hasNext()) {
+				Map.Entry<SocketChannel, byte[]> pair = itA.next();
+				if (sendTo == pair.getKey()) {
+					symKey = new SecretKeySpec(pair.getValue(), "AES");
+				}
+			}
+			
+			byte ivBytes[] = new byte[] {0,1,2,3,4};
+	        IvParameterSpec iv = new IvParameterSpec(ivBytes);
+			ByteBuffer out = ByteBuffer.wrap(encoder.encrypt(messageTo.getBytes(), symKey, iv));
 			try {
 				sendTo.write(out);
 			} catch (IOException e) {
@@ -151,101 +173,90 @@ public class ChatServer {
 
 		try {
 			s.read(inBuffer);
-			String message = new String(inBuffer.array()).trim();
+			String messageEnc = new String(inBuffer.array()).trim();
 			// if (clientMap.get(s) == null){
 			// clientMap.put(s, message);
 			// screenNameMap.put(message, s);
 			// }
-			System.out.println(message);
+			//System.out.println(message);
 
-			if (message.startsWith("%")) {
-
-				//s.close();
-				String user = message.substring(1);
-				Iterator<Map.Entry<String, SocketChannel>> it = screenNameMap.entrySet().iterator();
-
-				while (it.hasNext()) {
-					System.out.println("Line 161 sendToUser");
-					Map.Entry<String, SocketChannel> pair = it.next();
-					System.out.println(pair.getKey());
-					if (user.equals(pair.getKey())) {
-						SocketChannel toKick = pair.getValue();
-						String str = "-1";
-						toKick.write(ByteBuffer.wrap(str.getBytes()));
-						toKick.close();
-
-					}
-				}
-
+			if (!clientKeyMap.containsKey(s)) {
+				byte[] sKey = encoder.RSADecrypt(messageEnc.getBytes());
+				clientKeyMap.put(s, sKey);
 			}
 
-			if (message.startsWith("$")) {
-				broadcast(message.substring(1));
-				String user = message.substring(1, message.indexOf(' '));
-				Iterator<Map.Entry<String, SocketChannel>> it = screenNameMap.entrySet().iterator();
-
-			}
-
-			if (message.startsWith("@")) {
-				String user = message.substring(1, message.indexOf(' '));
-				String messageTo = message.substring(message.indexOf(' '));
-				Iterator<Map.Entry<String, SocketChannel>> it = screenNameMap.entrySet().iterator();
-				String sendUser = "";
-				while (it.hasNext()) {
-					System.out.println("Line 161 sendToUser");
-					Map.Entry<String, SocketChannel> pair = it.next();
-					if (s == pair.getValue()) {
-						sendUser = pair.getKey();
-					}
-				}
-				sendToUser(user, messageTo, sendUser);
-			}
-
-			if (message.startsWith("#")) {
-				String user = message.substring(1);
-				System.out.println("New User: " + user);
-				clientMap.put(s, user);
-				screenNameMap.put(user, s);
-				System.out.println(Arrays.toString(clientMap.entrySet().toArray()));
-				System.out.println(Arrays.toString(screenNameMap.entrySet().toArray()));
-			}
-			
-			if(message.equalsIgnoreCase("!List")){
-				String list = "Users: ";
-				Iterator<Map.Entry<String, SocketChannel>> it = screenNameMap.entrySet().iterator();
-				while (it.hasNext()) {
-					System.out.println("Line 161 sendToUser");
-					Map.Entry<String, SocketChannel> pair = it.next();
-					if(pair.getValue()!=s){
-						list = list + pair.getKey() + "|";
+			else {
+				Iterator<Map.Entry<SocketChannel, byte[]>> itA = clientKeyMap.entrySet().iterator();
+				SecretKey symKey = null;
+				while (itA.hasNext()) {
+					Map.Entry<SocketChannel, byte[]> pair = itA.next();
+					if (s == pair.getKey()) {
+						symKey = new SecretKeySpec(pair.getValue(), "AES");
 					}
 				}
 				
-				ByteBuffer out = ByteBuffer.wrap(list.getBytes());
-				try {
-					s.write(out);
-				} catch (IOException e) {
-					System.out.println("Send error");
+				byte ivBytes[] = new byte[] {0,1,2,3,4};
+		        IvParameterSpec iv = new IvParameterSpec(ivBytes);
+				String message;
+				message = encoder.decrypt(messageEnc.getBytes(), symKey, iv).toString();
+				
+				if (message.startsWith("%")) {
+					s.close();
 				}
-				
-				
+
+				if (message.startsWith("$")) {
+					broadcast(message.substring(1));
+				}
+
+				if (message.startsWith("@")) {
+					String user = message.substring(1, message.indexOf(' '));
+					String messageTo = message.substring(message.indexOf(' '));
+					Iterator<Map.Entry<String, SocketChannel>> it = screenNameMap.entrySet().iterator();
+					String sendUser = "";
+					while (it.hasNext()) {
+						System.out.println("Line 161 sendToUser");
+						Map.Entry<String, SocketChannel> pair = it.next();
+						if (s == pair.getValue()) {
+							sendUser = pair.getKey();
+						}
+					}
+					sendToUser(user, messageTo, sendUser);
+				}
+
+				if (message.startsWith("#")) {
+					String user = message.substring(1);
+					System.out.println("New User: " + user);
+					clientMap.put(s, user);
+					screenNameMap.put(user, s);
+					System.out.println(Arrays.toString(clientMap.entrySet().toArray()));
+					System.out.println(Arrays.toString(screenNameMap.entrySet().toArray()));
+				}
+
+				if (message.equalsIgnoreCase("!List")) {
+					String list = "Users: ";
+					Iterator<Map.Entry<String, SocketChannel>> it = screenNameMap.entrySet().iterator();
+					while (it.hasNext()) {
+						System.out.println("Line 161 sendToUser");
+						Map.Entry<String, SocketChannel> pair = it.next();
+						if (pair.getValue() != s) {
+							list = list + pair.getKey() + "|";
+						}
+					}
+
+					ByteBuffer out = ByteBuffer.wrap(list.getBytes());
+					try {
+						s.write(out);
+					} catch (IOException e) {
+						System.out.println("Send error");
+					}
+
+				}
 			}
 
 		} catch (IOException e) {
 			System.out.println("Recieve error");
 		}
 
-	}
-
-	public void close(Socket s){
-
-		try {
-			InputStream is = s.getInputStream();
-			while (is.read() > 0);
-			s.close();
-		} catch (IOException e){
-
-		}
 	}
 
 	private void startChatSession(SocketChannel clientSocket) {

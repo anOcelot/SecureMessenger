@@ -11,6 +11,9 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.*;
 
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
+
 /**
  * Created by pieterholleman on 11/14/17.
  */
@@ -20,6 +23,10 @@ public class ChatClient {
     Stack<String> messageStack;
     Selector selector;
     String screenName;
+    cryptotest encoder;
+    SecretKey sKey;
+    byte sKeyB[];
+    
 
 
     public ChatClient(String ip, int port, String str) throws IOException{
@@ -27,6 +34,10 @@ public class ChatClient {
         socket = SocketChannel.open();
         InetSocketAddress address = new InetSocketAddress(ip, port);
         selector = Selector.open();
+        encoder = new cryptotest();
+        encoder.setPublicKey("RSApub.der");
+        SecretKey sKey = encoder.generateAESKey();
+        sKeyB = encoder.RSAEncrypt(sKey.toString().getBytes());
         socket.socket().connect(address, 1000);
         socket.configureBlocking(false);
         //socket.register(selector, SelectionKey.OP_READ);
@@ -42,7 +53,7 @@ public class ChatClient {
 
         System.out.println("Chat session initiated, screenname: " + screenName);
 
-        while(socket.isConnected()) {
+        while(true) {
 
             try {
                 int num = selector.select();
@@ -77,38 +88,25 @@ public class ChatClient {
 
 
         }
-
-
     }
 
     public void go(){
 
         ChatClientT t = new ChatClientT();
         t.start();
-
-        try{
-        send( '#' + screenName);
+        send(sKeyB.toString());
+        byte ivBytes[] = new byte[] {0,1,2,3,4};
+        IvParameterSpec iv = new IvParameterSpec(ivBytes);
+        send(encoder.encrypt(('#' + screenName).getBytes(), sKey,iv).toString());
         Scanner scan = new Scanner(System.in);
         System.out.println("Enter a message");
-
-            while (socket.isConnected()) {
-                //System.out.println("Enter a message");
-                String message = scan.nextLine();
-                send(message);
-
+        while(true){
+            //System.out.println("Enter a message");
+            String message = scan.nextLine();
+            send(encoder.encrypt(message.getBytes(), sKey,iv).toString());
 
 
-            }
-        } catch (IOException e){
-            e.printStackTrace();
         }
-        System.out.println("Connection closed");
-
-        t.stop();
-
-        System.exit(0);
-
-
     }
 
     private class ChatClientT extends Thread {
@@ -124,15 +122,15 @@ public class ChatClient {
 
 
 
-    public void send(String msg)throws IOException {
+    public void send(String msg){
 
         ByteBuffer out = ByteBuffer.wrap(msg.getBytes());
-
+        try {
             socket.write(out);
             messageStack.push(msg);
-
-            //System.out.println("Send error");
-
+        } catch (IOException e){
+            System.out.println("Send error");
+        }
     }
 
     public void recieve(){
@@ -141,14 +139,11 @@ public class ChatClient {
 
         try {
             socket.read(inBuffer);
-            String message = new String(inBuffer.array()).trim();
-            //System.out.println(message);
-            messageStack.push(message);
-            if (message.equals("-1")){
-                System.out.println("Server disconnected");
-                System.exit(0);
-            }
+            byte ivBytes[] = new byte[] {0,1,2,3,4};
+            IvParameterSpec iv = new IvParameterSpec(ivBytes);
+            String message = encoder.decrypt(inBuffer.array(), sKey, iv).toString();
             System.out.println(message);
+            messageStack.push(message);
         } catch (IOException e){
             System.out.println("Recieve error");
         }
