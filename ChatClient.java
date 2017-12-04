@@ -42,11 +42,11 @@ public class ChatClient {
         sKey = encoder.generateAESKey();
         sKeyB = encoder.RSAEncrypt(sKey.getEncoded());
         socket.socket().connect(address, 1000);
+        for (byte b: sKeyB){
+            System.out.print(b + " ");
+        }
         socket.configureBlocking(false);
         //socket.register(selector, SelectionKey.OP_READ);
-        ivBytes = new byte[16];
-        r = new SecureRandom();
-        r.nextBytes(ivBytes);
         socket.register(selector, SelectionKey.OP_WRITE);
         socket.register(selector, SelectionKey.OP_READ);
         screenName = str;
@@ -99,11 +99,14 @@ public class ChatClient {
 
         ChatClientT t = new ChatClientT();
         t.start();
-        send(sKeyB.toString());
-        //byte ivBytes[] = new byte[16];
+        send(sKeyB);
+
+        byte ivBytes[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
         //SecureRandom r = new SecureRandom();
         //r.nextBytes(ivBytes);
+
         IvParameterSpec iv = new IvParameterSpec(ivBytes);
+
         send(encoder.encrypt(('#' + screenName).getBytes(), sKey,iv).toString());
         Scanner scan = new Scanner(System.in);
         System.out.println("Enter a message");
@@ -140,13 +143,21 @@ public class ChatClient {
         }
     }
 
+    public void send(byte b[]){
+        try {
+            socket.write(ByteBuffer.wrap(b));
+        } catch (IOException e){
+            System.out.println("Send error");
+        }
+    }
+
     public void recieve(){
 
         ByteBuffer inBuffer = ByteBuffer.allocate(1024);
 
         try {
             socket.read(inBuffer);
-            //byte ivBytes[] = new byte[16];
+            byte ivBytes[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
             //SecureRandom r = new SecureRandom();
             //r.nextBytes(ivBytes);
             IvParameterSpec iv = new IvParameterSpec(ivBytes);

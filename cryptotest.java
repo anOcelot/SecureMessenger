@@ -3,6 +3,9 @@ package Java;
 import java.io.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.spec.*;
 import javax.xml.bind.DatatypeConverter;
@@ -19,14 +22,19 @@ class cryptotest{
 	SecureRandom r = new SecureRandom();
 	byte ivbytes[] = new byte[16];
 	r.nextBytes(ivbytes);
+
 	IvParameterSpec iv = new IvParameterSpec(ivbytes);
 	String plaintext = "This is a test string to encrypt";
 	byte ciphertext[] = c.encrypt(plaintext.getBytes(),s,iv);
+		ByteBuffer inBuffer = ByteBuffer.wrap(encryptedsecret);
 	System.out.printf("CipherText: %s%n",DatatypeConverter.printHexBinary(ciphertext));
+    ByteBuffer out = ByteBuffer.allocate(1042);
+
+
 	byte decryptedsecret[] = c.RSADecrypt(encryptedsecret);
 	SecretKey ds = new SecretKeySpec(decryptedsecret,"AES");
-
-	r.nextBytes(ivbytes);
+	String bytestring = new String(ivbytes, Charset.defaultCharset());
+	byte bytez[] =  bytestring.getBytes(Charset.defaultCharset());
 
 	byte decryptedplaintext[] = c.decrypt(ciphertext,ds,iv);
 	String dpt = new String(decryptedplaintext);

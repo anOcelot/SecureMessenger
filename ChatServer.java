@@ -155,7 +155,7 @@ public class ChatServer {
 				}
 			}
 			
-			byte ivBytes[] = new byte[] {0,1,2,3,4};
+			byte ivBytes[] = new byte[] {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
 	        IvParameterSpec iv = new IvParameterSpec(ivBytes);
 			ByteBuffer out = ByteBuffer.wrap(encoder.encrypt(messageTo.getBytes(), symKey, iv));
 			try {
@@ -169,7 +169,7 @@ public class ChatServer {
 
 	public void recieve(SocketChannel s) {
 
-		ByteBuffer inBuffer = ByteBuffer.allocate(1024);
+		ByteBuffer inBuffer = ByteBuffer.allocate(1042);
 
 		try {
 			s.read(inBuffer);
@@ -181,8 +181,12 @@ public class ChatServer {
 			//System.out.println(message);
 
 			if (!clientKeyMap.containsKey(s)) {
-				byte[] sKey = encoder.RSADecrypt(messageEnc.getBytes());
-				clientKeyMap.put(s, sKey);
+			    //byte[] sKey = encoder.RSADecrypt(inBuffer.array());
+				//byte[] sKey = encoder.RSADecrypt(messageEnc.getBytes());
+                for (byte b: inBuffer.array()){
+                    System.out.print(b + " ");
+                }
+				//clientKeyMap.put(s, sKey);
 			}
 
 			else {
@@ -196,7 +200,9 @@ public class ChatServer {
 						symKey = new SecretKeySpec(pair.getValue(), "AES");
 					}
 				}
-				
+
+
+
 				byte ivBytes[] = new byte[] {0,1,2,3,4};
 		        IvParameterSpec iv = new IvParameterSpec(ivBytes);
 				String message;
