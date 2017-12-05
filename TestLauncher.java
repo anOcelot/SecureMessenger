@@ -2,9 +2,13 @@ package Java;
 
 import java.io.IOException;
 
-/**
- * Created by pieterholleman on 11/15/17.
- */
+/**************************************************************************************
+ * The following class tests the server
+ * 
+ * @author Cody West|Peter Holleman
+ * @version Project 4 Security
+ * @date 12/02/2017
+ *************************************************************************************/
 public class TestLauncher {
 
 

@@ -3,9 +3,13 @@ package Java;
 import java.io.IOException;
 import java.util.Scanner;
 
-/**
- * Created by pieterholleman on 11/15/17.
- */
+/**************************************************************************************
+ * The following class tests the client
+ * 
+ * @author Cody West|Peter Holleman
+ * @version Project 4 Security
+ * @date 12/02/2017
+ *************************************************************************************/
 public class TestClient {
 
 	public static void main(String[] args) {

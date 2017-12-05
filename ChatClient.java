@@ -15,9 +15,15 @@ import java.util.*;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 
-/**
- * Created by pieterholleman on 11/14/17.
- */
+/**************************************************************************************
+ * The following class is a chat client that links to a speciied server and encrypts
+ * messages sent to the server with a generated AES key that the server
+ * also holds
+ * 
+ * @author Cody West|Peter Holleman
+ * @version Project 4 Security
+ * @date 12/02/2017
+ *************************************************************************************/
 public class ChatClient {
 
     SocketChannel socket;
@@ -31,7 +37,13 @@ public class ChatClient {
     SecureRandom r;
     
 
-
+    /*************************************************************************
+	 * Constructor creates client with proper sockets, channel, 
+	 * IP address and port.
+	 * @param port pre-defined port for client
+	 * @param ip pre-defined ip for client
+	 * @param str username for the client
+	 ************************************************************************/
     public ChatClient(String ip, int port, String str) throws IOException{
         messageStack = new Stack<String>();
         socket = SocketChannel.open();
@@ -56,6 +68,9 @@ public class ChatClient {
 
     }
 
+    /*************************************************************************
+	 * Method for keeping track of read and write operations
+	 ************************************************************************/
     public void runChat() {
 
         System.out.println("Chat session initiated, screenname: " + screenName);
@@ -97,6 +112,10 @@ public class ChatClient {
         }
     }
 
+    /*************************************************************************
+	 * Method for taking user input and encrypting it then sending it to the
+	 * server
+	 ************************************************************************/
     public void go(){
 
         ChatClientT t = new ChatClientT();
@@ -121,6 +140,9 @@ public class ChatClient {
         }
     }
 
+    /*************************************************************************
+	 * Thread method for chat client
+	 ************************************************************************/
     private class ChatClientT extends Thread {
 
          ChatClientT() { }
@@ -134,6 +156,11 @@ public class ChatClient {
 
 
 
+    /*************************************************************************
+	 * Method that takes a string and sends it to server
+	 * (Old and no longer used)
+	 * @param msg the message to be sent
+	 ************************************************************************/
     public void send(String msg){
 
         ByteBuffer out = ByteBuffer.wrap(msg.getBytes());
@@ -145,6 +172,11 @@ public class ChatClient {
         }
     }
 
+    /*************************************************************************
+  	 * Method that takes a string and sends it to server
+  	 * (Old and no longer used)
+  	 * @param b the encrypted message to be sent
+  	 ************************************************************************/
     public void send(byte b[]){
         try {
         	byte[] seq = ByteBuffer.allocate(4).putInt(b.length).array();
@@ -172,6 +204,11 @@ public class ChatClient {
         }
     }
 
+    /*************************************************************************
+  	 * Method that is specifically used to send the AES key with RSA
+  	 * encryption
+  	 * @param b the encrypted key to be sent
+  	 ************************************************************************/
     public void sendKey(byte b[]){
         try {
             socket.write(ByteBuffer.wrap(b));
@@ -179,6 +216,11 @@ public class ChatClient {
             System.out.println("Send error");
         }
     }
+    
+    /*************************************************************************
+  	 * Method that recieves encrypted messages from the server and
+  	 * decrypts them to print for the user
+  	 ************************************************************************/
     public void recieve(){
 
         ByteBuffer inBuffer = ByteBuffer.allocate(1024);
@@ -206,6 +248,9 @@ public class ChatClient {
 
     }
 
+    /*************************************************************************
+  	 * Method to disconnect cleanly from server
+  	 ************************************************************************/
     public void disconnect(){
 
         try {

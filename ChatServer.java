@@ -14,9 +14,15 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-/**
- * Created by pieterholleman on 11/14/17.
- */
+/**************************************************************************************
+ * The following class is a chat client that links to a speciied server and encrypts
+ * messages sent to the server with a generated AES key that the server
+ * also holds
+ * 
+ * @author Cody West|Peter Holleman
+ * @version Project 4 Security
+ * @date 12/02/2017
+ *************************************************************************************/
 public class ChatServer {
 
 	// use "synchronized" keyword
@@ -31,6 +37,11 @@ public class ChatServer {
 	Selector selector;
 	cryptotest encoder;
 
+	/*************************************************************************
+	 * Constructor creates server with proper sockets, channel, 
+	 * and port. Creates proper maps for storage.
+	 * @param port pre-defined port for client
+	 ************************************************************************/
 	public ChatServer(int port) throws IOException {
 
 		encoder = new cryptotest();
@@ -49,6 +60,9 @@ public class ChatServer {
 
 	}
 
+	/*************************************************************************
+	 * Method for taking in connections of clients and registering them
+	 ************************************************************************/
 	public void listenForConnections() {
 
 		System.out.println("Listening for clients");
@@ -113,6 +127,10 @@ public class ChatServer {
 		}
 	}
 
+	/*************************************************************************
+	 * Method for taking a client message and broadcasting it to all users.
+	 * @param message message to be broadcasted
+	 ************************************************************************/
 	private void broadcast(String message) {
 		message = "BROADCAST: " + message;
 		ByteBuffer broBuf = ByteBuffer.wrap(message.getBytes());
@@ -147,6 +165,12 @@ public class ChatServer {
 
 	}
 
+	/*************************************************************************
+	 * Method that takes one users message and sends it to the specified one
+	 * @param user The user who sent the message
+	 * @param messageTo the message to be sent
+	 * @param sendUser the user to send the message to
+	 ************************************************************************/
 	private void sendToUser(String user, String messageTo, String sendUser) {
 		SocketChannel sendTo = null;
 		boolean got = false;
@@ -189,6 +213,11 @@ public class ChatServer {
 
 	}
 
+	/*************************************************************************
+	 * Method that sends a list of users to the one who requested it
+	 * @param s SocketChannel where the request came from
+	 * @param messageTo the list of users to send
+	 ************************************************************************/
 	private void sendList(SocketChannel s, String messageTo) {
 
 		Iterator<Map.Entry<SocketChannel, byte[]>> itA = clientKeyMap.entrySet().iterator();
@@ -216,6 +245,12 @@ public class ChatServer {
 
 	}
 
+	/*************************************************************************
+	 * Method that gets input from users and proccesses it depending on
+	 * the starting character and if it knows the user
+	 * @param s SocketChannel where the request came from
+	 * @param messageTo the list of users to send
+	 ************************************************************************/
 	public void recieve(SocketChannel s) {
 
 		try {
@@ -338,6 +373,10 @@ public class ChatServer {
 
 	}
 
+	/*************************************************************************
+	 * Method that starts a chat session for a user
+	 * @param clientSocket SocketChannel where the request came from
+	 ************************************************************************/
 	private void startChatSession(SocketChannel clientSocket) {
 
 		System.out.println("Chat session started");
@@ -360,6 +399,9 @@ public class ChatServer {
 		}
 	}
 
+	/*************************************************************************
+	 * Method that starts up server thread
+	 ************************************************************************/
 	private class ChatServerThread extends Thread {
 
 		SocketChannel sc;
