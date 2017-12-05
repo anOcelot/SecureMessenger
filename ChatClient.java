@@ -42,9 +42,11 @@ public class ChatClient {
         sKey = encoder.generateAESKey();
         sKeyB = encoder.RSAEncrypt(sKey.getEncoded());
         socket.socket().connect(address, 1000);
-        for (byte b: sKeyB){
-            System.out.print(b + " ");
-        }
+        int bSize = sKeyB.length;
+        //System.out.println("Size " + bSize);
+        //for (byte b: sKeyB){
+        //    System.out.print(b + " ");
+        //}
         socket.configureBlocking(false);
         //socket.register(selector, SelectionKey.OP_READ);
         socket.register(selector, SelectionKey.OP_WRITE);
@@ -99,7 +101,7 @@ public class ChatClient {
 
         ChatClientT t = new ChatClientT();
         t.start();
-        send(sKeyB);
+        sendKey(sKeyB);
 
         byte ivBytes[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
         //SecureRandom r = new SecureRandom();
@@ -107,13 +109,13 @@ public class ChatClient {
 
         IvParameterSpec iv = new IvParameterSpec(ivBytes);
 
-        send(encoder.encrypt(('#' + screenName).getBytes(), sKey,iv).toString());
+        send(encoder.encrypt(('#' + screenName).getBytes(), sKey,iv));
         Scanner scan = new Scanner(System.in);
         System.out.println("Enter a message");
         while(true){
             //System.out.println("Enter a message");
-            String message = scan.nextLine();
-            send(encoder.encrypt(message.getBytes(), sKey,iv).toString());
+            //String message = scan.nextLine();
+            //send(encoder.encrypt(message.getBytes(), sKey,iv));
 
 
         }
@@ -145,12 +147,33 @@ public class ChatClient {
 
     public void send(byte b[]){
         try {
+        	byte[] seq = ByteBuffer.allocate(4).putInt(b.length).array();
+        	byte[] sendB = new byte[4+b.length];
+        	System.arraycopy(seq,0,sendB,0,4);
+        	System.arraycopy(b,0,sendB,4,b.length);
+        	System.out.println("MSG SIZE: " + sendB.length);
+        	byte[] otherWay = Arrays.copyOfRange(seq, 0, 4);
+			int msgSize = ByteBuffer.wrap(otherWay).getInt();
+			System.out.println("MSG SIZE FROM BUFF: " + msgSize);
+        	for (byte b22 : seq){
+        		System.out.print(b + " ");
+        	}
+        	
+        	
+        	
             socket.write(ByteBuffer.wrap(b));
         } catch (IOException e){
             System.out.println("Send error");
         }
     }
 
+    public void sendKey(byte b[]){
+        try {
+            socket.write(ByteBuffer.wrap(b));
+        } catch (IOException e){
+            System.out.println("Send error");
+        }
+    }
     public void recieve(){
 
         ByteBuffer inBuffer = ByteBuffer.allocate(1024);

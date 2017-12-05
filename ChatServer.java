@@ -169,11 +169,10 @@ public class ChatServer {
 
 	public void recieve(SocketChannel s) {
 
-		ByteBuffer inBuffer = ByteBuffer.allocate(1042);
+		
 
 		try {
-			s.read(inBuffer);
-			String messageEnc = new String(inBuffer.array()).trim();
+			
 			// if (clientMap.get(s) == null){
 			// clientMap.put(s, message);
 			// screenNameMap.put(message, s);
@@ -181,15 +180,38 @@ public class ChatServer {
 			//System.out.println(message);
 
 			if (!clientKeyMap.containsKey(s)) {
+				ByteBuffer inBuffer = ByteBuffer.allocate(256);
+				s.read(inBuffer);
+				String messageEnc = new String(inBuffer.array()).trim();
+				byte b128[] = inBuffer.array();
+				byte b2[] = new byte[256];
 			    //byte[] sKey = encoder.RSADecrypt(inBuffer.array());
 				//byte[] sKey = encoder.RSADecrypt(messageEnc.getBytes());
-                for (byte b: inBuffer.array()){
-                    System.out.print(b + " ");
-                }
-				//clientKeyMap.put(s, sKey);
+				int bSize = b128.length;
+				System.out.println("Size: " + bSize);
+                //for (byte b : b128){
+                   // System.out.print(b + " ");
+                //}
+                byte[] sKey = encoder.RSADecrypt(b128);
+				clientKeyMap.put(s, sKey);
 			}
 
 			else {
+				ByteBuffer inBuffer = ByteBuffer.allocate(1042);
+				s.read(inBuffer);
+				byte[] msgTot = inBuffer.array();
+				byte[] msgSizeB = new byte[4];
+				System.arraycopy(msgTot,0,msgSizeB,0,4);
+				byte[] otherWay = Arrays.copyOfRange(msgSizeB, 0, 4);
+				int msgSize = ByteBuffer.wrap(otherWay).getInt();
+				System.out.println("MSG SIZE: " + msgSize);
+				for (byte b : msgSizeB){
+                 System.out.print(b + " ");
+				}
+				byte[] msgStringEnc = new byte[msgSize];
+				System.arraycopy(msgTot,4,msgStringEnc,0,msgSize);
+				String messageEnc = new String(inBuffer.array()).trim();
+				
 				Iterator<Map.Entry<SocketChannel, byte[]>> itA = clientKeyMap.entrySet().iterator();
 				SecretKey symKey = null;
 				//maybe?
@@ -203,10 +225,10 @@ public class ChatServer {
 
 
 
-				byte ivBytes[] = new byte[] {0,1,2,3,4};
+				byte ivBytes[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
 		        IvParameterSpec iv = new IvParameterSpec(ivBytes);
 				String message;
-				message = encoder.decrypt(messageEnc.getBytes(), symKey, iv).toString();
+				message = encoder.decrypt(msgStringEnc, symKey, iv).toString();
 				
 				if (message.startsWith("%")) {
 					s.close();
