@@ -108,14 +108,14 @@ public class ChatClient {
         //r.nextBytes(ivBytes);
 
         IvParameterSpec iv = new IvParameterSpec(ivBytes);
-
-        send(encoder.encrypt(('#' + screenName).getBytes(), sKey,iv));
+        String userSend = "#" + screenName;
+        send(encoder.encrypt(userSend.getBytes(), sKey,iv));
         Scanner scan = new Scanner(System.in);
         System.out.println("Enter a message");
         while(true){
-            //System.out.println("Enter a message");
-            //String message = scan.nextLine();
-            //send(encoder.encrypt(message.getBytes(), sKey,iv));
+            System.out.println("Enter a message");
+            String message = scan.nextLine();
+            send(encoder.encrypt(message.getBytes(), sKey,iv));
 
 
         }
@@ -151,17 +151,22 @@ public class ChatClient {
         	byte[] sendB = new byte[4+b.length];
         	System.arraycopy(seq,0,sendB,0,4);
         	System.arraycopy(b,0,sendB,4,b.length);
-        	System.out.println("MSG SIZE: " + sendB.length);
-        	byte[] otherWay = Arrays.copyOfRange(seq, 0, 4);
-			int msgSize = ByteBuffer.wrap(otherWay).getInt();
-			System.out.println("MSG SIZE FROM BUFF: " + msgSize);
-        	for (byte b22 : seq){
-        		System.out.print(b + " ");
-        	}
+//        	System.out.println("MSG SIZE: " + sendB.length);
+//        	byte[] otherWay = Arrays.copyOfRange(seq, 0, 4);
+//			int msgSize = ByteBuffer.wrap(otherWay).getInt();
+//			System.out.println("MSG SIZE FROM BUFF: " + msgSize);
+//			byte ivBytes[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
+//	        IvParameterSpec iv = new IvParameterSpec(ivBytes);
+//			System.out.println(encoder.decrypt(b, sKey, iv).toString());
+//			String byteMsg = new String(encoder.decrypt(b, sKey, iv));
+//			System.out.println(byteMsg);
+//        	for (byte b22 : seq){
+//        		System.out.print(b22 + " ");
+//        	}
         	
         	
         	
-            socket.write(ByteBuffer.wrap(b));
+            socket.write(ByteBuffer.wrap(sendB));
         } catch (IOException e){
             System.out.println("Send error");
         }
@@ -180,11 +185,19 @@ public class ChatClient {
 
         try {
             socket.read(inBuffer);
+            
+            byte[] msgTot = inBuffer.array();
+			byte[] msgSizeB = new byte[4];
+			System.arraycopy(msgTot,0,msgSizeB,0,4);
+			byte[] otherWay = Arrays.copyOfRange(msgSizeB, 0, 4);
+			int msgSize = ByteBuffer.wrap(otherWay).getInt();
+			byte[] msgStringEnc = new byte[msgSize];
+			System.arraycopy(msgTot,4,msgStringEnc,0,msgSize);
             byte ivBytes[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
             //SecureRandom r = new SecureRandom();
             //r.nextBytes(ivBytes);
             IvParameterSpec iv = new IvParameterSpec(ivBytes);
-            String message = encoder.decrypt(inBuffer.array(), sKey, iv).toString();
+            String message = new String(encoder.decrypt(msgStringEnc, sKey, iv));
             System.out.println(message);
             messageStack.push(message);
         } catch (IOException e){

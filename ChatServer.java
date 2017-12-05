@@ -157,7 +157,12 @@ public class ChatServer {
 			
 			byte ivBytes[] = new byte[] {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
 	        IvParameterSpec iv = new IvParameterSpec(ivBytes);
-			ByteBuffer out = ByteBuffer.wrap(encoder.encrypt(messageTo.getBytes(), symKey, iv));
+	        byte[] sendMsgEnc = encoder.encrypt(messageTo.getBytes(), symKey, iv);
+	        byte[] seq = ByteBuffer.allocate(4).putInt(sendMsgEnc.length).array();
+        	byte[] sendB = new byte[4+sendMsgEnc.length];
+        	System.arraycopy(seq,0,sendB,0,4);
+        	System.arraycopy(sendMsgEnc,0,sendB,4,sendMsgEnc.length);
+			ByteBuffer out = ByteBuffer.wrap(sendB);
 			try {
 				sendTo.write(out);
 			} catch (IOException e) {
@@ -204,13 +209,12 @@ public class ChatServer {
 				System.arraycopy(msgTot,0,msgSizeB,0,4);
 				byte[] otherWay = Arrays.copyOfRange(msgSizeB, 0, 4);
 				int msgSize = ByteBuffer.wrap(otherWay).getInt();
-				System.out.println("MSG SIZE: " + msgSize);
-				for (byte b : msgSizeB){
-                 System.out.print(b + " ");
-				}
+				//System.out.println("MSG SIZE: " + msgSize);
+				//for (byte b : msgSizeB){
+                 //System.out.print(b + " ");
+				//}
 				byte[] msgStringEnc = new byte[msgSize];
 				System.arraycopy(msgTot,4,msgStringEnc,0,msgSize);
-				String messageEnc = new String(inBuffer.array()).trim();
 				
 				Iterator<Map.Entry<SocketChannel, byte[]>> itA = clientKeyMap.entrySet().iterator();
 				SecretKey symKey = null;
@@ -228,7 +232,7 @@ public class ChatServer {
 				byte ivBytes[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
 		        IvParameterSpec iv = new IvParameterSpec(ivBytes);
 				String message;
-				message = encoder.decrypt(msgStringEnc, symKey, iv).toString();
+				message = new String(encoder.decrypt(msgStringEnc, symKey, iv));
 				
 				if (message.startsWith("%")) {
 					s.close();
