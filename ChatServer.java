@@ -35,7 +35,7 @@ public class ChatServer {
 
 		encoder = new cryptotest();
 		encoder.setPrivateKey("RSApriv.der");
-        encoder.setPublicKey("RSApub.der");
+		encoder.setPublicKey("RSApub.der");
 		clientMap = Collections.synchronizedMap(new HashMap<SocketChannel, String>());
 		screenNameMap = Collections.synchronizedMap(new HashMap<String, SocketChannel>());
 		clientKeyMap = Collections.synchronizedMap(new HashMap<SocketChannel, byte[]>());
@@ -120,11 +120,28 @@ public class ChatServer {
 			if (key.isValid() && key.channel() instanceof SocketChannel) {
 				SocketChannel sch = (SocketChannel) key.channel();
 				try {
-					sch.write(broBuf);
+					Iterator<Map.Entry<SocketChannel, byte[]>> itA = clientKeyMap.entrySet().iterator();
+					SecretKey symKey = null;
+					while (itA.hasNext()) {
+						Map.Entry<SocketChannel, byte[]> pair = itA.next();
+						if (sch == pair.getKey()) {
+							symKey = new SecretKeySpec(pair.getValue(), "AES");
+						}
+					}
+					
+					byte ivBytes[] = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+					IvParameterSpec iv = new IvParameterSpec(ivBytes);
+					byte[] sendMsgEnc = encoder.encrypt(message.getBytes(), symKey, iv);
+					byte[] seq = ByteBuffer.allocate(4).putInt(sendMsgEnc.length).array();
+					byte[] sendB = new byte[4 + sendMsgEnc.length];
+					System.arraycopy(seq, 0, sendB, 0, 4);
+					System.arraycopy(sendMsgEnc, 0, sendB, 4, sendMsgEnc.length);
+					ByteBuffer out = ByteBuffer.wrap(sendB);
+					sch.write(out);
+					out.rewind();
 				} catch (IOException e) {
 					System.out.println("BroBuf error");
 				}
-				broBuf.rewind();
 			}
 		}
 
@@ -154,14 +171,14 @@ public class ChatServer {
 					symKey = new SecretKeySpec(pair.getValue(), "AES");
 				}
 			}
-			
-			byte ivBytes[] = new byte[] {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
-	        IvParameterSpec iv = new IvParameterSpec(ivBytes);
-	        byte[] sendMsgEnc = encoder.encrypt(messageTo.getBytes(), symKey, iv);
-	        byte[] seq = ByteBuffer.allocate(4).putInt(sendMsgEnc.length).array();
-        	byte[] sendB = new byte[4+sendMsgEnc.length];
-        	System.arraycopy(seq,0,sendB,0,4);
-        	System.arraycopy(sendMsgEnc,0,sendB,4,sendMsgEnc.length);
+
+			byte ivBytes[] = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+			IvParameterSpec iv = new IvParameterSpec(ivBytes);
+			byte[] sendMsgEnc = encoder.encrypt(messageTo.getBytes(), symKey, iv);
+			byte[] seq = ByteBuffer.allocate(4).putInt(sendMsgEnc.length).array();
+			byte[] sendB = new byte[4 + sendMsgEnc.length];
+			System.arraycopy(seq, 0, sendB, 0, 4);
+			System.arraycopy(sendMsgEnc, 0, sendB, 4, sendMsgEnc.length);
 			ByteBuffer out = ByteBuffer.wrap(sendB);
 			try {
 				sendTo.write(out);
@@ -172,17 +189,42 @@ public class ChatServer {
 
 	}
 
+	private void sendList(SocketChannel s, String messageTo) {
+
+		Iterator<Map.Entry<SocketChannel, byte[]>> itA = clientKeyMap.entrySet().iterator();
+		SecretKey symKey = null;
+		while (itA.hasNext()) {
+			Map.Entry<SocketChannel, byte[]> pair = itA.next();
+			if (s == pair.getKey()) {
+				symKey = new SecretKeySpec(pair.getValue(), "AES");
+			}
+		}
+
+		byte ivBytes[] = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+		IvParameterSpec iv = new IvParameterSpec(ivBytes);
+		byte[] sendMsgEnc = encoder.encrypt(messageTo.getBytes(), symKey, iv);
+		byte[] seq = ByteBuffer.allocate(4).putInt(sendMsgEnc.length).array();
+		byte[] sendB = new byte[4 + sendMsgEnc.length];
+		System.arraycopy(seq, 0, sendB, 0, 4);
+		System.arraycopy(sendMsgEnc, 0, sendB, 4, sendMsgEnc.length);
+		ByteBuffer out = ByteBuffer.wrap(sendB);
+		try {
+			s.write(out);
+		} catch (IOException e) {
+			System.out.println("Send error");
+		}
+
+	}
+
 	public void recieve(SocketChannel s) {
 
-		
-
 		try {
-			
+
 			// if (clientMap.get(s) == null){
 			// clientMap.put(s, message);
 			// screenNameMap.put(message, s);
 			// }
-			//System.out.println(message);
+			// System.out.println(message);
 
 			if (!clientKeyMap.containsKey(s)) {
 				ByteBuffer inBuffer = ByteBuffer.allocate(256);
@@ -190,14 +232,14 @@ public class ChatServer {
 				String messageEnc = new String(inBuffer.array()).trim();
 				byte b128[] = inBuffer.array();
 				byte b2[] = new byte[256];
-			    //byte[] sKey = encoder.RSADecrypt(inBuffer.array());
-				//byte[] sKey = encoder.RSADecrypt(messageEnc.getBytes());
+				// byte[] sKey = encoder.RSADecrypt(inBuffer.array());
+				// byte[] sKey = encoder.RSADecrypt(messageEnc.getBytes());
 				int bSize = b128.length;
 				System.out.println("Size: " + bSize);
-                //for (byte b : b128){
-                   // System.out.print(b + " ");
-                //}
-                byte[] sKey = encoder.RSADecrypt(b128);
+				// for (byte b : b128){
+				// System.out.print(b + " ");
+				// }
+				byte[] sKey = encoder.RSADecrypt(b128);
 				clientKeyMap.put(s, sKey);
 			}
 
@@ -206,20 +248,21 @@ public class ChatServer {
 				s.read(inBuffer);
 				byte[] msgTot = inBuffer.array();
 				byte[] msgSizeB = new byte[4];
-				System.arraycopy(msgTot,0,msgSizeB,0,4);
+				System.arraycopy(msgTot, 0, msgSizeB, 0, 4);
 				byte[] otherWay = Arrays.copyOfRange(msgSizeB, 0, 4);
 				int msgSize = ByteBuffer.wrap(otherWay).getInt();
-				//System.out.println("MSG SIZE: " + msgSize);
-				//for (byte b : msgSizeB){
-                 //System.out.print(b + " ");
-				//}
+				// System.out.println("MSG SIZE: " + msgSize);
+				// for (byte b : msgSizeB){
+				// System.out.print(b + " ");
+				// }
 				byte[] msgStringEnc = new byte[msgSize];
-				System.arraycopy(msgTot,4,msgStringEnc,0,msgSize);
-				
+				System.arraycopy(msgTot, 4, msgStringEnc, 0, msgSize);
+
 				Iterator<Map.Entry<SocketChannel, byte[]>> itA = clientKeyMap.entrySet().iterator();
 				SecretKey symKey = null;
-				//maybe?
-				//symKey = new SecretKeySpec((byte[])clientKeyMap.get(s), "AES");
+				// maybe?
+				// symKey = new SecretKeySpec((byte[])clientKeyMap.get(s),
+				// "AES");
 				while (itA.hasNext()) {
 					Map.Entry<SocketChannel, byte[]> pair = itA.next();
 					if (s == pair.getKey()) {
@@ -227,13 +270,11 @@ public class ChatServer {
 					}
 				}
 
-
-
-				byte ivBytes[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
-		        IvParameterSpec iv = new IvParameterSpec(ivBytes);
+				byte ivBytes[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+				IvParameterSpec iv = new IvParameterSpec(ivBytes);
 				String message;
 				message = new String(encoder.decrypt(msgStringEnc, symKey, iv));
-				
+
 				if (message.startsWith("%")) {
 					s.close();
 				}
@@ -277,17 +318,21 @@ public class ChatServer {
 						}
 					}
 
-					ByteBuffer out = ByteBuffer.wrap(list.getBytes());
-					try {
-						s.write(out);
-					} catch (IOException e) {
-						System.out.println("Send error");
-					}
-
+					sendList(s, list);
 				}
+
+				// ByteBuffer out = ByteBuffer.wrap(list.getBytes());
+				// try {
+				// s.write(out);
+				// } catch (IOException e) {
+				// System.out.println("Send error");
+				// }
+
 			}
 
-		} catch (IOException e) {
+		} catch (
+
+		IOException e) {
 			System.out.println("Recieve error");
 		}
 
